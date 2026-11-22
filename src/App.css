@@ -24,3 +24,8 @@
 .manual { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .manual input { padding: 8px; border-radius: 6px; border: 1px solid #999; }
 .footer { margin-top: 32px; font-size: 14px; color: #777; }
+
+button.button { border: none; font-size: 16px; margin-top: 20px; }
+button.button:disabled { opacity: 0.5; cursor: not-allowed; }
+.recipes { text-align: left; background: #f6fbf6; border-radius: 12px; padding: 4px 16px 16px; margin-top: 16px; }
+.recipes h2 { color: #2e7d32; }

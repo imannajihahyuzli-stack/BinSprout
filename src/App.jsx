@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import "./App.css";
 
 const MODEL_BASE =
@@ -13,6 +14,8 @@ export default function App() {
   const [message, setMessage] = useState("Take or upload a photo of one ingredient.");
   const [ingredients, setIngredients] = useState([]);
   const [manual, setManual] = useState("");
+  const [recipes, setRecipes] = useState("");
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
 
   // Load the model once, when the page opens
   useEffect(() => {
@@ -67,6 +70,23 @@ export default function App() {
     setManual("");
   }
 
+  async function getRecipes() {
+  setLoadingRecipes(true);
+  setRecipes("");
+  try {
+    const res = await fetch("/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ingredients }),
+    });
+    const data = await res.json();
+    setRecipes(data.text);
+  } catch {
+    setRecipes("Could not reach the server. Is it running?");
+  }
+  setLoadingRecipes(false);
+}
+
   return (
     <main className="app">
       <h1>BinSprout</h1>
@@ -112,6 +132,20 @@ export default function App() {
         />
         <button onClick={handleManualAdd}>Add</button>
       </div>
+
+        <button
+          className="button"
+          onClick={getRecipes}
+          disabled={ingredients.length === 0 || loadingRecipes}
+      >
+        {loadingRecipes ? "Thinking..." : "Get recipes"}
+        </button> 
+
+      {recipes && (
+        <div className="recipes">
+          <ReactMarkdown>{recipes}</ReactMarkdown>
+        </div>
+    )}
 
       <p className="footer">When in doubt, throw it out.</p>
     </main>

@@ -1,122 +1,119 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from "react";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+const MODEL_BASE =
+  "https://huggingface.co/pastelpinkyunicorn/binsprout-classifier/resolve/main/";
+const THRESHOLD = 0.6; // below this, the model is "not sure"
+
+export default function App() {
+  const modelRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [message, setMessage] = useState("Take or upload a photo of one ingredient.");
+  const [ingredients, setIngredients] = useState([]);
+  const [manual, setManual] = useState("");
+
+  // Load the model once, when the page opens
+  useEffect(() => {
+    window.tmImage
+      .load(MODEL_BASE + "model.json", MODEL_BASE + "metadata.json")
+      .then((m) => {
+        modelRef.current = m;
+        setReady(true);
+      })
+      .catch(() => setLoadError("Could not load the model. Check the link."));
+  }, []);
+
+  function addIngredient(name) {
+    const clean = name.trim().toLowerCase();
+    if (!clean) return;
+    setIngredients((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+  }
+
+  function removeIngredient(name) {
+    setIngredients((prev) => prev.filter((i) => i !== name));
+  }
+
+  async function handlePhoto(e) {
+    const file = e.target.files[0];
+    if (!file || !modelRef.current) return;
+
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    setMessage("Checking...");
+
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+
+    const predictions = await modelRef.current.predict(img);
+    const best = [...predictions].sort((a, b) => b.probability - a.probability)[0];
+    const percent = Math.round(best.probability * 100);
+
+    if (best.className.toLowerCase() === "non-food") {
+      setMessage("That doesn't look like an ingredient. Try another photo.");
+    } else if (best.probability < THRESHOLD) {
+      setMessage(`Not sure (best guess: ${best.className}, ${percent}%). Please type it in below.`);
+    } else {
+      addIngredient(best.className);
+      setMessage(`Detected ${best.className} (${percent}%)`);
+    }
+    e.target.value = ""; // lets you pick the same photo again
+  }
+
+  function handleManualAdd() {
+    addIngredient(manual);
+    setManual("");
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main className="app">
+      <h1>BinSprout</h1>
+      <p className="tagline">Snap your ingredients. Waste less food.</p>
 
-      <div className="ticks"></div>
+      {loadError && <p className="error">{loadError}</p>}
+      {!ready && !loadError && <p>Loading the AI model...</p>}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <label className="button">
+        Take / upload photo
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhoto}
+          disabled={!ready}
+          hidden
+        />
+      </label>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {preview && <img className="preview" src={preview} alt="Your ingredient" />}
+      <p className="message">{message}</p>
+
+      <h2>Your ingredients</h2>
+      {ingredients.length === 0 && <p>None yet.</p>}
+      <ul className="chips">
+        {ingredients.map((name) => (
+          <li key={name}>
+            {name}
+            <button onClick={() => removeIngredient(name)} aria-label={`Remove ${name}`}>
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="manual">
+        <input
+          value={manual}
+          onChange={(e) => setManual(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleManualAdd()}
+          placeholder="Type an ingredient"
+        />
+        <button onClick={handleManualAdd}>Add</button>
+      </div>
+
+      <p className="footer">When in doubt, throw it out.</p>
+    </main>
+  );
 }
-
-export default App

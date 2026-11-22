@@ -1,16 +1,18 @@
 import "dotenv/config";
 import express from "express";
+import process from "node:process";
+import { pathToFileURL } from "node:url";
 
-const app = express();
+export const app = express();
 app.use(express.json());
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 app.post("/api/recipes", async (req, res) => {
   // Clean the list: max 15 items, short, letters and numbers only
-  const raw = Array.isArray(req.body.ingredients) ? req.body.ingredients : [];
+  const raw = Array.isArray(req.body?.ingredients) ? req.body.ingredients : [];
   const ingredients = raw
-    .map((i) => String(i).slice(0, 40).replace(/[^\p{L}\p{N} \-]/gu, "").trim())
+    .map((i) => String(i).slice(0, 40).replace(/[^\p{L}\p{N} -]/gu, "").trim())
     .filter(Boolean)
     .slice(0, 15);
 
@@ -53,12 +55,17 @@ Keep it concise.`;
 
     const parts = data.candidates?.[0]?.content?.parts || [];
     const text = parts.map((p) => p.text || "").join("").trim();
-    res.json({ text: text || "No answer came back. Please try again." });
+    if (!text) {
+      return res.status(502).json({ text: "No answer came back. Please try again." });
+    }
+    res.json({ text });
   } catch (err) {
     console.error(err);
     res.status(500).json({ text: "Something went wrong on the server." });
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`BinSprout server running on port ${PORT}`));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`BinSprout server running on port ${PORT}`));
+}

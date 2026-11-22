@@ -1,12 +1,18 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { app } from './server.js'
 
-// https://vite.dev/config/
+function attachRecipeApi(server) {
+  server.middlewares.use(app)
+}
+
 export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': 'http://localhost:3001',
+  plugins: [
+    react(),
+    {
+      name: 'recipe-api',
+      configureServer: attachRecipeApi,
+      configurePreviewServer: attachRecipeApi,
     },
-  }
+  ],
 })

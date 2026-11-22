@@ -1,31 +1,112 @@
-.app {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 24px 16px;
-  text-align: center;
-  font-family: system-ui, sans-serif;
+/* SaveBite interface based on the supplied Figma-style prototype. */
+:root {
+  --green: #347542;
+  --cream: #fffcf4;
+  --yellow: #fff27d;
+  --dark: #242424;
+  --line: #deebe0;
 }
-.tagline { color: #555; margin-top: 0; }
-.button {
-  display: inline-block;
-  background: #2e7d32;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin: 12px 0;
-}
-.preview { width: 224px; height: 224px; object-fit: cover; border-radius: 8px; display: block; margin: 8px auto; }
-.message { font-weight: 600; }
-.error { color: #c62828; }
-.chips { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.chips li { background: #e8f5e9; padding: 6px 10px; border-radius: 16px; text-transform: capitalize; }
-.chips button { border: none; background: none; cursor: pointer; margin-left: 6px; font-size: 16px; }
-.manual { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
-.manual input { padding: 8px; border-radius: 6px; border: 1px solid #999; }
-.footer { margin-top: 32px; font-size: 14px; color: #777; }
 
-button.button { border: none; font-size: 16px; margin-top: 20px; }
-button.button:disabled { opacity: 0.5; cursor: not-allowed; }
-.recipes { text-align: left; background: #f6fbf6; border-radius: 12px; padding: 4px 16px 16px; margin-top: 16px; }
-.recipes h2 { color: #2e7d32; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--cream); color: var(--dark); font: 16px/1.5 Poppins, system-ui, sans-serif; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+a { color: var(--green); font-weight: 650; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.sb-shell { min-height: 100vh; }
+.sb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px max(24px, calc((100vw - 1120px) / 2)); background: var(--cream); }
+.sb-brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; font-weight: 700; font-size: 22px; text-decoration: none; }
+.sb-logo { width: 36px; height: 36px; object-fit: contain; }
+.sb-nav { display: flex; align-items: center; gap: 12px; }
+.sb-nav-link { text-decoration: none; text-align: center; font-size: 14px; padding: 8px 12px; border-radius: 16px; }
+.sb-nav-icon { display: grid; place-items: center; width: 54px; height: 31px; margin: auto; border-radius: 20px; }
+.sb-nav-link[aria-current="page"] .sb-nav-icon { background: var(--yellow); }
+.sb-icon { display: block; width: 21px; height: 21px; flex: none; }
+
+.sb-view { width: min(calc(100% - 40px), 760px); margin: 40px auto 100px; }
+.sb-home-view { width: min(calc(100% - 48px), 1120px); margin: 24px auto 92px; }
+.sb-welcome, .sb-banner { background: var(--yellow); border-radius: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 32px 48px; min-height: 224px; margin-bottom: 26px; }
+h1, h2 { color: var(--green); line-height: 1.2; margin: 0 0 8px; }
+h1 { font-size: clamp(26px, 5vw, 39px); }
+h2 { font-size: 19px; }
+p { margin: 0; }
+.sb-welcome h1 { font-size: clamp(30px, 4vw, 44px); }
+.sb-welcome p, .sb-home-actions > p, .sb-home-side p { font-size: 13px; line-height: 1.35; }
+.sb-welcome-art { display: block; flex: none; width: 126px; height: 126px; margin-right: 12px; transform: none; background: url('/SaveBite-logo.png') center/contain no-repeat; }
+.sb-home-columns { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 24px; }
+.sb-home-actions h2 { margin-bottom: 6px; }
+.sb-home-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
+.sb-home-card { display: block; min-height: 152px; border-radius: 18px; background: #fff; padding: 18px; text-decoration: none; box-shadow: 0 4px 12px #3475420a; }
+.sb-home-card p { font-weight: 400; color: var(--dark); margin-top: 4px; }
+.sb-small-icon { display: grid; place-items: center; width: 32px; height: 32px; background: var(--cream); color: var(--green); border-radius: 10px; margin-bottom: 8px; }
+.sb-home-side { display: grid; gap: 16px; align-content: start; }
+.sb-home-basket { display: flex; align-items: center; gap: 12px; padding: 16px; min-height: 80px; background: var(--green); color: #fff; border-radius: 18px; text-decoration: none; }
+.sb-home-basket p { font-weight: 400; margin-top: 4px; }
+.sb-arrow { margin-left: auto; }
+.sb-home-tip { background: #fff; padding: 16px; border: 1px solid var(--line); border-radius: 18px; }
+.sb-home-tip h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.sb-home-tip .sb-small-icon { background: var(--yellow); width: 24px; height: 24px; margin: 0; }
+.sb-home-tip .sb-icon { width: 16px; height: 16px; }
+
+.sb-subpage { max-width: 760px; margin-inline: auto; }
+.sb-subpage-banner { min-height: 155px; padding: 22px; margin-bottom: 16px; }
+.sb-subpage-banner h1 { font-size: clamp(24px, 4vw, 34px); }
+.sb-subpage-banner p { font-size: 14px; }
+.sb-subpage-banner .sb-small-icon { background: #ffffff80; }
+.sb-content-card, .sb-ingredient-item { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; margin-bottom: 14px; box-shadow: 0 3px 14px #3475420d; }
+.sb-content-card p, .sb-ingredient-item p { font-size: 14px; margin-bottom: 12px; }
+.sb-content-card h2, .sb-ingredient-item h2 { font-size: 19px; }
+.sb-list { display: grid; gap: 14px; }
+.sb-list > * { margin-bottom: 0; }
+.sb-ingredient-item { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.sb-ingredient-item p { margin: 0; }
+.sb-remove { border: 1px solid var(--line); background: #fff; border-radius: 12px; color: var(--green); padding: 10px; }
+.sb-photo-preview { display: block; max-width: min(100%, 280px); max-height: 270px; object-fit: contain; margin: 14px auto; border-radius: 16px; }
+.sb-photo-message { color: var(--green); font-size: 14px; font-weight: 600; margin: 12px 0; }
+.sb-error { color: #ae2929; }
+.sb-disabled { opacity: .5; }
+.sb-upload-button { cursor: pointer; }
+.sb-recipe-markdown h1, .sb-recipe-markdown h2, .sb-recipe-markdown h3 { color: var(--green); }
+.sb-recipe-markdown ul, .sb-recipe-markdown ol { padding-left: 23px; }
+.sb-recipe-markdown p, .sb-recipe-markdown li { line-height: 1.7; }
+
+.sb-primary, .sb-secondary { display: block; width: 100%; text-align: center; padding: 13px; border-radius: 16px; margin: 12px 0; min-height: 48px; border: none; font-size: 15px; text-decoration: none; font-weight: 650; }
+.sb-primary { background: var(--green); color: white; }
+.sb-secondary { background: #fff; color: var(--green); border: 1px solid var(--line); }
+label:not(.sb-upload-button) { display: block; margin-bottom: 16px; font-weight: 600; }
+input:not([type="file"]) { display: block; width: 100%; padding: 12px 14px; margin-top: 6px; border: 1px solid #b9cebc; border-radius: 16px; background: white; min-height: 48px; }
+
+@media (max-width: 900px) and (min-width: 641px) {
+  .sb-header { padding-inline: 24px; }
+  .sb-home-columns { grid-template-columns: 1fr; gap: 20px; }
+  .sb-home-side { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .sb-welcome { min-height: 176px; padding: 24px; }
+}
+@media (max-width: 640px) {
+  .sb-header { padding: 14px 24px; }
+  .sb-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; justify-content: space-evenly; gap: 0; background: white; border-top: 1px solid #dce8dd; padding: 7px 4px max(7px, env(safe-area-inset-bottom)); }
+  .sb-nav-link { padding: 3px 8px; color: var(--dark); font-size: 11px; }
+  .sb-nav-link[aria-current="page"] { color: var(--green); }
+  .sb-view, .sb-home-view { width: min(calc(100% - 40px), 720px); margin: 20px auto 100px; }
+  .sb-home-view { width: calc(100% - 48px); margin-top: 4px; }
+  .sb-welcome { min-height: 144px; padding: 20px 16px; margin-bottom: 16px; }
+  .sb-welcome h1 { font-size: 22px; }
+  .sb-welcome-art { width: 76px; height: 76px; margin: 0; transform: none; }
+  .sb-home-columns { display: block; }
+  .sb-home-grid { gap: 12px; }
+  .sb-home-card { min-height: 134px; padding: 14px; }
+  .sb-home-side { margin-top: 16px; }
+  .sb-content-card, .sb-ingredient-item { padding: 16px; }
+  .sb-subpage-banner { padding: 16px; }
+}
+@media (max-width: 375px) {
+  .sb-home-grid { gap: 10px; }
+  .sb-home-card { padding: 11px; overflow-wrap: anywhere; }
+  .sb-welcome h1 { font-size: 20px; }
+}
+@media (max-width: 320px) {
+  .sb-home-grid { grid-template-columns: 1fr; }
+  .sb-welcome-art { display: none; }
+}

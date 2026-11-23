@@ -27,24 +27,48 @@ function Icon({ name }) {
 }
 
 const primaryPages = ["Home", "Basket", "History"];
-const historyKey = "savebite.recipeHistory";
+const historyKey = "savebite_history";
+const legacyHistoryKey = "savebite.recipeHistory";
+const historyLabels = {
+  ingredient: "Ingredient added",
+  recipe: "Recipes generated",
+  analysis: "Photo analysis",
+};
 const historyDate = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
 
-function readRecipeHistory() {
+function parseHistory(value, legacy = false) {
   try {
-    const entries = JSON.parse(window.localStorage.getItem(historyKey));
-    return Array.isArray(entries) ? entries.filter((entry) =>
+    const entries = JSON.parse(value);
+    if (!Array.isArray(entries)) return [];
+    return entries.filter((entry) =>
       typeof entry?.id === "string" &&
       Number.isFinite(Date.parse(entry.createdAt)) &&
       Array.isArray(entry.ingredients) &&
       entry.ingredients.every((ingredient) => typeof ingredient === "string") &&
-      typeof entry.text === "string" && entry.text.trim()
-    ) : [];
+      typeof entry.text === "string" && entry.text.trim() &&
+      (legacy || Object.hasOwn(historyLabels, entry.type))
+    ).map((entry) => legacy ? { ...entry, type: "recipe" } : entry)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   } catch {
     return [];
+  }
+}
+
+function readHistory() {
+  const value = window.localStorage.getItem(historyKey);
+  return value === null
+    ? parseHistory(window.localStorage.getItem(legacyHistoryKey), true)
+    : parseHistory(value);
+}
+
+function loadHistory() {
+  try {
+    return { entries: readHistory(), failed: false };
+  } catch {
+    return { entries: [], failed: true };
   }
 }
 
@@ -69,8 +93,8 @@ export default function App() {
   const [ingredients, setIngredients] = useState([]);
   const [manual, setManual] = useState("");
   const [recipes, setRecipes] = useState("");
-  const [recipeHistory, setRecipeHistory] = useState(readRecipeHistory);
-  const [historyStorageFailed, setHistoryStorageFailed] = useState(false);
+  const [history, setHistory] = useState(loadHistory);
+  const unsavedHistory = useRef(null);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [page, setPage] = useState(currentPage);
 
@@ -87,13 +111,38 @@ export default function App() {
 
   useEffect(() => {
     const onStorage = (event) => {
-      if (!historyStorageFailed && (event.key === historyKey || event.key === null)) {
-        setRecipeHistory(readRecipeHistory());
+      if (unsavedHistory.current === null &&
+        (event.key === historyKey || event.key === legacyHistoryKey || event.key === null)) {
+        setHistory(loadHistory());
       }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [historyStorageFailed]);
+  }, []);
+
+  function updateHistory(update) {
+    const entries = update(unsavedHistory.current ?? loadHistory().entries);
+    try {
+      window.localStorage.setItem(historyKey, JSON.stringify(entries));
+      window.localStorage.removeItem(legacyHistoryKey);
+      unsavedHistory.current = null;
+      setHistory({ entries, failed: false });
+    } catch {
+      unsavedHistory.current = entries;
+      setHistory({ entries, failed: true });
+    }
+  }
+
+  function saveHistory(type, ingredients, text) {
+    const entry = {
+      id: globalThis.crypto.getRandomValues(new Uint32Array(4)).join("-"),
+      createdAt: new Date().toISOString(),
+      type,
+      ingredients,
+      text,
+    };
+    updateHistory((entries) => [entry, ...entries]);
+  }
 
   useEffect(() => {
     document.title = `${page} · SaveBite`;
@@ -135,52 +184,44 @@ export default function App() {
     setPreview(url);
     setMessage("Checking...");
 
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-
-    const predictions = await modelRef.current.predict(img);
-    const best = [...predictions].sort((a, b) => b.probability - a.probability)[0];
-    const percent = Math.round(best.probability * 100);
-
-    if (best.className.toLowerCase() === "non-food") {
-      setMessage("That doesn't look like an ingredient. Try another photo.");
-    } else if (best.probability < THRESHOLD) {
-      setMessage(`Not sure (best guess: ${best.className}, ${percent}%). Please type it in below.`);
-    } else {
-      addIngredient(best.className);
-      setMessage(`Detected ${best.className} (${percent}%)`);
-    }
-    e.target.value = "";
-  }
-
-  function handleManualAdd() {
-    addIngredient(manual);
-    setManual("");
-  }
-
-  function saveRecipe(text) {
-    const entry = {
-      id: globalThis.crypto.getRandomValues(new Uint32Array(4)).join("-"),
-      createdAt: new Date().toISOString(),
-      ingredients,
-      text,
-    };
     try {
-      const storedHistory = readRecipeHistory();
-      const history = [entry, ...storedHistory];
-      if (historyStorageFailed) {
-        history.push(...recipeHistory.filter((item) =>
-          !storedHistory.some((stored) => stored.id === item.id)
-        ));
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+
+      const predictions = await modelRef.current.predict(img);
+      const best = [...predictions].sort((a, b) => b.probability - a.probability)[0];
+      const percent = Math.round(best.probability * 100);
+      const isFood = best.className.toLowerCase() !== "non-food";
+      let result;
+
+      if (!isFood) {
+        result = "That doesn't look like an ingredient. Try another photo.";
+      } else if (best.probability < THRESHOLD) {
+        result = `Not sure (best guess: ${best.className}, ${percent}%). Please type it in below.`;
+      } else {
+        addIngredient(best.className);
+        result = `Detected ${best.className} (${percent}%)`;
       }
-      window.localStorage.setItem(historyKey, JSON.stringify(history));
-      setRecipeHistory(history);
-      setHistoryStorageFailed(false);
+      setMessage(result);
+      saveHistory("analysis", isFood ? [best.className] : [], result);
     } catch {
-      setRecipeHistory((previous) => [entry, ...previous]);
-      setHistoryStorageFailed(true);
+      setMessage("Could not analyze this photo. Please try another photo.");
+    } finally {
+      e.target.value = "";
     }
+  }
+
+  function handleManualAdd(event) {
+    event.preventDefault();
+    const clean = manual.trim().toLowerCase();
+    if (!clean) return;
+    addIngredient(manual);
+    if (!ingredients.includes(clean)) {
+      saveHistory("ingredient", [clean], "Added to your ingredient basket.");
+    }
+    setManual("");
+    go("Basket");
   }
 
   async function getRecipes() {
@@ -195,7 +236,7 @@ export default function App() {
       const data = await res.json();
       setRecipes(data.text);
       if (res.ok && typeof data.text === "string" && data.text.trim()) {
-        saveRecipe(data.text);
+        saveHistory("recipe", ingredients, data.text);
       }
     } catch {
       setRecipes("Could not reach the server. Is it running?");
@@ -306,7 +347,7 @@ export default function App() {
       <div className="sb-subpage">
         {banner("Add an ingredient", "Enter an ingredient name to add it to your basket.", "Keyboard")}
         <article className="sb-content-card">
-          <form onSubmit={(e) => { e.preventDefault(); if (manual.trim()) { handleManualAdd(); go("Basket"); } }}>
+          <form onSubmit={handleManualAdd}>
             <label>Ingredient<input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="e.g. Carrot" /></label>
             <button className="sb-primary" type="submit" disabled={!manual.trim()}>Add to Basket</button>
           </form>
@@ -359,16 +400,32 @@ export default function App() {
   function historyScreen() {
     return (
       <div className="sb-subpage">
-        {banner("Recipe History", "Revisit your previously generated recipes.", "History")}
-        {historyStorageFailed && <p role="status">Browser storage is unavailable. New recipes may only be available until you close or refresh this tab.</p>}
-        {recipeHistory.length ? (
+        {banner("Recipe History", "Revisit ingredients, photo analyses, and recipes saved in this browser.", "History")}
+        {history.failed && <p role="status">History changes could not be saved to this browser. They may be lost when you close or refresh this tab.</p>}
+        {history.entries.length ? (
           <div className="sb-list">
-            {recipeHistory.map((entry) => (
+            {history.entries.map((entry) => (
               <details className="sb-content-card" key={entry.id}>
-                <summary>{entry.ingredients.join(", ")} · <time dateTime={entry.createdAt}>{historyDate.format(new Date(entry.createdAt))}</time></summary>
-                <div className="sb-recipe-markdown"><ReactMarkdown>{entry.text}</ReactMarkdown></div>
+                <summary>
+                  {historyLabels[entry.type]}{entry.ingredients.length ? `: ${entry.ingredients.join(", ")}` : ""} ·{" "}
+                  <time dateTime={entry.createdAt}>{historyDate.format(new Date(entry.createdAt))}</time>
+                </summary>
+                {entry.type === "recipe"
+                  ? <div className="sb-recipe-markdown"><ReactMarkdown>{entry.text}</ReactMarkdown></div>
+                  : <p>{entry.text}</p>}
+                <button className="sb-secondary" type="button"
+                  onClick={() => updateHistory((entries) => entries.filter((item) => item.id !== entry.id))}>
+                  Delete record
+                </button>
               </details>
             ))}
+            <button className="sb-secondary" type="button" onClick={() => {
+              if (window.confirm("Clear all history saved in this browser?")) {
+                updateHistory(() => []);
+              }
+            }}>
+              Clear all history
+            </button>
           </div>
         ) : (
           <article className="sb-content-card">

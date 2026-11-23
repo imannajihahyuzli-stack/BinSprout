@@ -77,7 +77,6 @@ export default function App() {
   function go(target) {
     window.location.hash = encodeURIComponent(target);
     setPage(target);
-    window.scrollTo(0, 0);
   }
 
   useEffect(() => {
@@ -98,6 +97,7 @@ export default function App() {
 
   useEffect(() => {
     document.title = `${page} · SaveBite`;
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [page]);
 
   // Original AI model-loading logic retained.

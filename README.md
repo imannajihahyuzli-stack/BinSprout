@@ -57,8 +57,8 @@ React (Vite), Express, Teachable Machine (TensorFlow.js), Hugging Face, Gemini A
 
 ## Project Links
 
-- **Live demo:** [add Hugging Face Space link later]
-- **Model:** [add Hugging Face model link later]
+- **Live demo:** https://save-bite-main.vercel.app
+- **Model:** https://huggingface.co/pastelpinkyunicorn/binsprout-classifier
 - **Demo video:** [add video link later]
 
 ## Disclaimer

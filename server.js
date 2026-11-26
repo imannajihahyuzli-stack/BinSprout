@@ -7,6 +7,7 @@ export const app = express();
 app.use(express.json());
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+const FALLBACK_MODEL = "gemini-3.5-flash-lite";
 
 app.post("/api/recipes", async (req, res) => {
   // Clean the list: max 15 items, short, letters and numbers only
@@ -35,8 +36,8 @@ Finish with: "If food looks or smells spoiled, do not eat it."
 Keep it concise.`;
 
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+    const generate = (model) => fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -46,6 +47,12 @@ Keep it concise.`;
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
       }
     );
+    let r = await generate(MODEL);
+    if (r.status === 503 && MODEL !== FALLBACK_MODEL) {
+      await r.body?.cancel();
+      console.warn("Gemini model unavailable, trying fallback", MODEL);
+      r = await generate(FALLBACK_MODEL);
+    }
     const data = await r.json();
 
     if (!r.ok) {
